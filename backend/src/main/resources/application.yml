@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ecgcare?options=-c%20TimeZone%3DAsia%2FKolkata
+    username: ecguser
+    password: ecgpass
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+
+minio:
+  endpoint: http://localhost:9000
+  accessKey: minio
+  secretKey: minio12345
+  bucket: ecg-bucket
+
+redis:
+  host: localhost
+  port: 6379
+
+jwt:
+  issuer: ecgcare
+  secret: 9OcXCsPIkYMx+5lo0OqYY9uC+hgoQ4vHvBFlMgchy4A=
+  access-ttl-minutes: 15
+  refresh-ttl-days: 7
