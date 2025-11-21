@@ -1,0 +1,131 @@
+-- ENABLE REQUIRED EXTENSIONS
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS citext;
+
+--------------------------------------------------------
+--  DOCTORS (MAIN USERS OF THE SYSTEM)
+--------------------------------------------------------
+CREATE TABLE IF NOT EXISTS doctor (
+  doctor_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  full_name text NOT NULL,
+  email citext NOT NULL UNIQUE,
+  phone text,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_doctor_email ON doctor(email);
+
+--------------------------------------------------------
+--  DOCTOR AUTH (PASSWORDS, MFA, ETC.)
+--------------------------------------------------------
+CREATE TABLE IF NOT EXISTS doctor_auth (
+  doctor_id uuid PRIMARY KEY REFERENCES doctor(doctor_id) ON DELETE CASCADE,
+  password_hash text NOT NULL,
+  mfa_enabled boolean NOT NULL DEFAULT false,
+  mfa_secret text,
+  last_password_reset timestamptz
+);
+
+--------------------------------------------------------
+--  SESSION LOG (LOGIN/LOGOUT)
+--------------------------------------------------------
+CREATE TABLE IF NOT EXISTS session (
+  session_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  doctor_id uuid NOT NULL REFERENCES doctor(doctor_id) ON DELETE CASCADE,
+  login_at timestamptz NOT NULL DEFAULT now(),
+  last_activity_at timestamptz NOT NULL DEFAULT now(),
+  logout_at timestamptz,
+  ended_by text CHECK (ended_by IN ('logout','timeout','replaced')),
+  ip inet,
+  user_agent text
+);
+CREATE INDEX IF NOT EXISTS idx_session_doctor ON session(doctor_id, login_at);
+
+--------------------------------------------------------
+--  AUDIT LOG (TRACKS ACTIONS)
+--------------------------------------------------------
+CREATE TABLE IF NOT EXISTS audit_log (
+  audit_id bigserial PRIMARY KEY,
+  session_id uuid REFERENCES session(session_id),
+  doctor_id uuid REFERENCES doctor(doctor_id),
+  action text NOT NULL,           -- e.g., 'CREATE_PATIENT'
+  entity_type text NOT NULL,      -- e.g., 'patient', 'scan'
+  entity_id uuid,
+  details jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_audit_doctor_time ON audit_log(doctor_id, created_at);
+
+--------------------------------------------------------
+--  PATIENT TABLE (PLAIN FIELDS)
+--------------------------------------------------------
+CREATE TABLE IF NOT EXISTS patient (
+  patient_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  full_name text NOT NULL,
+  email citext,
+  phone text,
+  age int,
+  gender text CHECK (gender IN ('male', 'female', 'other')),
+  address text,
+  created_by uuid NOT NULL REFERENCES doctor(doctor_id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_patient_doctor ON patient(created_by);
+
+--------------------------------------------------------
+--  ECG SCANS (FILE METADATA)
+--------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ecg_scan (
+  scan_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id uuid NOT NULL REFERENCES patient(patient_id) ON DELETE CASCADE,
+  storage_path text NOT NULL,     -- Supabase Storage path
+  mimetype text NOT NULL,
+  uploaded_by uuid REFERENCES doctor(doctor_id),
+  uploaded_at timestamptz NOT NULL DEFAULT now(),
+  checksum text,
+  metadata jsonb
+);
+CREATE INDEX IF NOT EXISTS idx_scan_patient_time ON ecg_scan(patient_id, uploaded_at);
+
+--------------------------------------------------------
+--  ML RESULTS (MODEL OUTPUTS)
+--------------------------------------------------------
+CREATE TABLE IF NOT EXISTS ml_result (
+  result_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id uuid NOT NULL REFERENCES patient(patient_id) ON DELETE CASCADE,
+  scan_id uuid REFERENCES ecg_scan(scan_id) ON DELETE SET NULL,
+  model_version text NOT NULL,
+  predicted_label text NOT NULL,
+  class_probs jsonb NOT NULL,     -- e.g. {"normal":0.92, "afib":0.08}
+  explanation_path text,          -- GradCAM, saliency maps
+  threshold numeric(5,4) NOT NULL DEFAULT 0.5,
+  created_by uuid REFERENCES doctor(doctor_id),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_ml_patient_time ON ml_result(patient_id, created_at);
+
+--------------------------------------------------------
+--  DRAFTS (UNSAVED FORMS)
+--------------------------------------------------------
+CREATE TABLE IF NOT EXISTS draft (
+  draft_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  doctor_id uuid NOT NULL REFERENCES doctor(doctor_id) ON DELETE CASCADE,
+  patient_id uuid REFERENCES patient(patient_id) ON DELETE CASCADE,
+  form_type text NOT NULL,         -- e.g., 'new_patient', 'scan_upload'
+  data jsonb NOT NULL,             -- unsaved form data
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_draft_doctor ON draft(doctor_id, updated_at);
+
+--------------------------------------------------------
+--  REFRESH TOKENS (SERVER-SIDE TOKEN STORAGE)
+--------------------------------------------------------
+CREATE TABLE IF NOT EXISTS refresh_token (
+  token_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  doctor_id uuid NOT NULL REFERENCES doctor(doctor_id) ON DELETE CASCADE,
+  token_hash text NOT NULL,        -- hashed using SHA256
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_refresh_doctor ON refresh_token(doctor_id);
