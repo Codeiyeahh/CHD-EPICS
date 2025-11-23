@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://db.poyvoucjpwlnmcwfyxvq.supabase.co:5432/postgres
+    username: postgres
+    password: EPICSVITBHOPAL@25
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  flyway:
+    enabled: false # VERY IMPORTANT – we disabled Flyway earlier
