@@ -1,0 +1,29 @@
+# Log files
+*.log
+**/logs/
+backend/*.log
+backend/app*.log
+backend/startup.log
+backend/run.log
+
+# Database files
+backend/data/
+**/*.db
+**/*.mv.db
+**/*.lock.db
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+

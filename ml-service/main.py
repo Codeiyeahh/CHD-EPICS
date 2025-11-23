@@ -1,8 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel 
 from transformers import ViTImageProcessor, ViTForImageClassification 
 from PIL import Image
 import torch
+import base64
+import io
+from typing import Optional
 
 app = FastAPI()
 
@@ -17,9 +20,11 @@ except Exception as e:
     processor = None
     model = None
 
-
 class ScanRequest(BaseModel):
-    mri_scan_id: int
+    scan_id: Optional[str] = None
+    image_data: Optional[str] = None  # Base64 encoded image
+    # Keep mri_scan_id for backward compatibility
+    mri_scan_id: Optional[int] = None
 
 @app.get("/")
 def read_root():
@@ -31,14 +36,33 @@ def read_root():
 async def predict_mri(request: ScanRequest):
     """
     This is the main endpoint your Java backend will call.
+    Accepts base64 encoded image data from the backend.
     """
     try:
-        # Make sure you have an image named "test_image.jpg"
-        # in the same folder as main.py
-        image = Image.open("test_image.jpg") #(Later, you'll replace this line with code to download the real image from Supabase).
-    except FileNotFoundError:
-        # If the image is missing, send an error
-        return {"error": "test_image.jpg not found! Please add it."}
+        # Check if image data is provided
+        if request.image_data:
+            # Decode base64 image data
+            try:
+                image_bytes = base64.b64decode(request.image_data)
+                image = Image.open(io.BytesIO(image_bytes))
+                print(f"--- Received image from backend (size: {len(image_bytes)} bytes) ---")
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Failed to decode image data: {str(e)}")
+        else:
+            # Fallback: try to use test image (for backward compatibility during development)
+            try:
+                image = Image.open("test_image.jpg")
+                print("--- Using fallback test_image.jpg ---")
+            except FileNotFoundError:
+                raise HTTPException(status_code=400, detail="No image data provided and test_image.jpg not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load image: {str(e)}")
+
+    # Check if model and processor are loaded
+    if processor is None or model is None:
+        raise HTTPException(status_code=500, detail="ML model not loaded. Check server logs for errors.")
 
     # The 'processor' resizes and normalizes the image
     inputs = processor(images=image, return_tensors="pt")
@@ -63,13 +87,16 @@ async def predict_mri(request: ScanRequest):
     # Get the model's confidence score for that prediction
     confidence = torch.softmax(logits, dim=-1)[0, predicted_class_idx].item()
 
-    print(f"Prediction complete. Returning fake result: {fake_prediction}")
+    print(f"Prediction complete. Returning result: {fake_prediction} (confidence: {confidence:.4f})")
     
     # 5. Send back the final JSON response
+    # Use scan_id if provided, otherwise fall back to mri_scan_id for backward compatibility
+    scan_id = request.scan_id if request.scan_id else (str(request.mri_scan_id) if request.mri_scan_id else None)
+    
     return {
-        "mri_scan_id": request.mri_scan_id, # Send back the ID they gave us
+        "scan_id": scan_id,  # Send back the scan ID
         "prediction": fake_prediction,
-        "confidence_score": round(confidence, 4), # A nice rounded number
+        "confidence_score": round(confidence, 4),  # A nice rounded number
         "status": "COMPLETED"
     }
 
