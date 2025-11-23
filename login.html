@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doctor Login</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .error-message {
+      color: #dc2626;
+      background: #fef2f2;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 1rem;
+      text-align: center;
+      display: none;
+    }
+
+    .success-message {
+      color: #16a34a;
+      background: #f0fdf4;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 1rem;
+      text-align: center;
+      display: none;
+    }
+
+    .loading {
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #fff;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="auth-container">
+    <h1>Doctor Login</h1>
+    <form id="loginForm">
+      <label for="email">Email:</label>
+      <input type="email" id="email" name="email" required />
+
+      <label for="password">Password:</label>
+      <input type="password" id="password" name="password" required />
+
+      <div id="errorMsg" class="error-message"></div>
+      <div id="successMsg" class="success-message"></div>
+
+      <button type="submit" id="loginBtn">Log In</button>
+    </form>
+    <p class="switch-link">New doctor? <a href="signup.html">Sign up here</a></p>
+  </div>
+
+  <script>
+    const API_BASE_URL = 'http://localhost:8080';
+
+    const loginForm = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+    const errorMsg = document.getElementById('errorMsg');
+    const successMsg = document.getElementById('successMsg');
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Hide previous messages
+      errorMsg.style.display = 'none';
+      successMsg.style.display = 'none';
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      // Basic validation
+      if (!email || !password) {
+        showError('Please fill in all fields');
+        return;
+      }
+
+      // Show loading state
+      loginBtn.innerHTML = '<span class="spinner"></span>Logging in...';
+      loginBtn.classList.add('loading');
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Store auth token/user data in sessionStorage
+          if (data.token) {
+            sessionStorage.setItem('authToken', data.token);
+          }
+          if (data.user) {
+            sessionStorage.setItem('user', JSON.stringify(data.user));
+          }
+          // Store email as fallback identifier
+          sessionStorage.setItem('userEmail', email);
+          sessionStorage.setItem('isLoggedIn', 'true');
+
+          showSuccess('Login successful! Redirecting...');
+
+          // Redirect to dashboard
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 1000);
+        } else {
+          showError(data.message || 'Invalid email or password');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        showError('Unable to connect to server. Please try again.');
+      } finally {
+        loginBtn.innerHTML = 'Log In';
+        loginBtn.classList.remove('loading');
+      }
+    });
+
+    function showError(message) {
+      errorMsg.textContent = message;
+      errorMsg.style.display = 'block';
+    }
+
+    function showSuccess(message) {
+      successMsg.textContent = message;
+      successMsg.style.display = 'block';
+    }
+
+    // Check if already logged in
+    if (sessionStorage.getItem('isLoggedIn') === 'true') {
+      window.location.href = 'index.html';
+    }
+  </script>
+</body>
+
+</html>
