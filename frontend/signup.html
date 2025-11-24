@@ -2,20 +2,91 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Doctor Sign Up</title>
-  <link rel="stylesheet" href="styles.css">
   <style>
-    /* Styles for messages and spinner, matching login.html */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #f9fafb;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .sign-auth-container {
+      background: #fff;
+      border-radius: 12px;
+      padding: 30px 40px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      width: 320px;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      text-align: center;
+      font-weight: 600;
+      margin-bottom: 24px;
+      color: #333;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: #555;
+      font-size: 0.95rem;
+    }
+
+    input.form-input {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 1rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      transition: border-color 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    input.form-input:focus {
+      outline: none;
+      border-color: #6b7280;
+    }
+
+    button#signupBtn {
+      width: 100%;
+      background-color: #333333;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 0;
+      color: white;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    button#signupBtn:hover:not(.loading) {
+      background-color: #555555;
+    }
+
     .error-message {
       color: #dc2626;
       background: #fef2f2;
       padding: 10px;
       border-radius: 6px;
-      margin-top: 1rem;
+      margin-top: 8px;
       text-align: center;
       display: none;
+      font-size: 0.9rem;
     }
 
     .success-message {
@@ -23,9 +94,10 @@
       background: #f0fdf4;
       padding: 10px;
       border-radius: 6px;
-      margin-top: 1rem;
+      margin-top: 8px;
       text-align: center;
       display: none;
+      font-size: 0.9rem;
     }
 
     .loading {
@@ -50,13 +122,30 @@
         transform: rotate(360deg);
       }
     }
+
+    .switch-link {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #555;
+    }
+
+    .switch-link a {
+      color: #333333;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .switch-link a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 
 <body>
   <div class="sign-auth-container">
     <h1>Sign Up</h1>
-    <form id="signupForm">
+    <form id="signupForm" novalidate>
       <label for="name">Full Name:</label>
       <input type="text" id="name" class="form-input" required />
 
@@ -81,7 +170,7 @@
   </div>
 
   <script>
-    const API_BASE_URL = 'http://localhost:8080'; // Ensure this matches your backend port
+    const API_BASE_URL = 'http://localhost:8080';
 
     const signupForm = document.getElementById('signupForm');
     const signupBtn = document.getElementById('signupBtn');
@@ -91,74 +180,46 @@
     signupForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      // 1. Reset messages
       errorMsg.style.display = 'none';
       successMsg.style.display = 'none';
 
-      // 2. Get values
       const name = document.getElementById('name').value.trim();
       const email = document.getElementById('email').value.trim();
       const phone = document.getElementById('phone-number').value.trim();
       const password = document.getElementById('password').value;
       const confirm = document.getElementById('confirm').value;
 
-      // 3. Validate Passwords
       if (password !== confirm) {
         showError('Passwords do not match');
         return;
       }
 
-      // 4. Show loading spinner
       signupBtn.innerHTML = '<span class="spinner"></span>Signing up...';
       signupBtn.classList.add('loading');
 
       try {
-        // 5. Call the API
-        // Note: Ensure your backend endpoint is correct (e.g., /api/auth/signup or /api/auth/register)
         const response = await fetch(`${API_BASE_URL}/api/auth/signup`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ name, email, phone, password })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, phone, password }),
         });
 
         const data = await response.json();
 
         if (response.ok) {
-          // 6. On Success: Store session data (Simulating auto-login)
-
-          // Save token if provided
-          if (data.token) {
-            sessionStorage.setItem('authToken', data.token);
-          }
-
-          // Save user object if provided
-          if (data.user) {
-            sessionStorage.setItem('user', JSON.stringify(data.user));
-          }
-
-          // Save generic login flags matching login.html logic
+          if (data.token) sessionStorage.setItem('authToken', data.token);
+          if (data.user) sessionStorage.setItem('user', JSON.stringify(data.user));
           sessionStorage.setItem('userEmail', email);
           sessionStorage.setItem('isLoggedIn', 'true');
 
           showSuccess('Account created! Redirecting...');
-
-          // 7. Redirect to Dashboard
-          setTimeout(() => {
-            // Assuming your dashboard file is index.html (or index1.html if you renamed it)
-            window.location.href = 'index.html';
-          }, 1500);
-
+          setTimeout(() => window.location.href = 'main.html', 1500);
         } else {
-          // Handle API errors (e.g., "Email already exists")
           showError(data.message || 'Signup failed. Please try again.');
         }
       } catch (error) {
-        console.error('Signup error:', error);
         showError('Unable to connect to server. Please check your connection.');
       } finally {
-        // Reset button state
         if (successMsg.style.display === 'none') {
           signupBtn.innerHTML = 'Sign Up';
           signupBtn.classList.remove('loading');

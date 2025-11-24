@@ -556,7 +556,8 @@
                 <i class="fa-solid fa-heart-pulse"></i>
                 <h3>Upload ECG or Connect Device</h3>
                 <p>Select a file to analyze or start a live recording.</p>
-                <input type="file" id="ecgUpload">
+                <input type="file" id="ecgUpload" accept="image/png">
+
                 <br>
                 <button class="btn-primary">Analyze Scan</button>
             </div>
@@ -592,6 +593,14 @@
     </div>
 
     <script>
+        
+        // Redirect to login if not logged in
+        const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+        if (isLoggedIn !== 'true') {
+         window.location.href = 'login.html';
+  }    
+
+
         let patients = [
             { name: "John Doe", age: 45, gender: "Male", phone: "123-456-7890", lastVisit: "2023-10-01", scanImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/ECG_12_leads.jpg/400px-ECG_12_leads.jpg" },
             { name: "Sarah Smith", age: 32, gender: "Female", phone: "987-654-3210", lastVisit: "2023-11-15", scanImage: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Ekg_lead_v1.png/300px-Ekg_lead_v1.png" },
@@ -716,10 +725,13 @@
 
         function logout() {
             if (confirm("Are you sure you want to logout?")) {
-                sessionStorage.clear();
-                window.location.href = "login.html";
-            }
-        }
+    sessionStorage.clear();
+   window.location.href = "thankyou.html";  // redirect here instead
+}
+
+   
+}
+
     </script>
 </body>
 

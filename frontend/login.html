@@ -5,33 +5,95 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Doctor Login</title>
-  <link rel="stylesheet" href="styles.css">
   <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #f9fafb;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .auth-container {
+      background: #fff;
+      border-radius: 12px;
+      padding: 30px 40px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      width: 320px;
+      box-sizing: border-box;
+    }
+    h1 {
+      text-align: center;
+      font-weight: 600;
+      margin-bottom: 24px;
+      color: #333;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: #555;
+      font-size: 0.95rem;
+    }
+    input[type="email"], input[type="password"] {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 1rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      transition: border-color 0.2s ease;
+      box-sizing: border-box;
+    }
+    input[type="email"]:focus, input[type="password"]:focus {
+      outline: none;
+      border-color: #6b7280;
+    }
+    button#loginBtn {
+      width: 100%;
+      background-color: #333333;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 0;
+      color: white;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    button#loginBtn:hover:not(.loading) {
+      background-color: #555555;
+    }
     .error-message {
       color: #dc2626;
       background: #fef2f2;
       padding: 10px;
       border-radius: 6px;
-      margin-top: 1rem;
+      margin-top: 8px;
       text-align: center;
       display: none;
+      font-size: 0.9rem;
     }
-
     .success-message {
       color: #16a34a;
       background: #f0fdf4;
       padding: 10px;
       border-radius: 6px;
-      margin-top: 1rem;
+      margin-top: 8px;
       text-align: center;
       display: none;
+      font-size: 0.9rem;
     }
-
     .loading {
       opacity: 0.7;
       pointer-events: none;
     }
-
     .spinner {
       display: inline-block;
       width: 16px;
@@ -43,11 +105,24 @@
       margin-right: 8px;
       vertical-align: middle;
     }
-
     @keyframes spin {
       to {
         transform: rotate(360deg);
       }
+    }
+    .switch-link {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 0.9rem;
+      color: #555;
+    }
+    .switch-link a {
+      color: #333333;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .switch-link a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
@@ -155,5 +230,4 @@
     }
   </script>
 </body>
-
 </html>

@@ -1,3 +1,108 @@
+const API_BASE_URL = 'http://localhost:8080'; // Your Java backend base URL
+
+document.getElementById('loginForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+
+  const loginBtn = document.getElementById('loginBtn');
+  const errorMsg = document.getElementById('errorMsg');
+  const successMsg = document.getElementById('successMsg');
+
+  errorMsg.style.display = 'none';
+  successMsg.style.display = 'none';
+
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  if (!email || !password) {
+    errorMsg.style.display = 'block';
+    errorMsg.textContent = 'Please fill in all fields';
+    return;
+  }
+
+  loginBtn.innerHTML = '<span class="spinner"></span>Logging in...';
+  loginBtn.classList.add('loading');
+
+  // Hardcoded fallback dataset (keep for offline/demo)
+  const doctorsDataset = [
+    { email: 'doctor1@example.com', password: 'pass123', fullName: 'Dr. Alice' },
+    { email: 'doctor2@example.com', password: 'password', fullName: 'Dr. Bob' }
+  ];
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      if (data.token) {
+        sessionStorage.setItem('authToken', data.token);
+      }
+      if (data.user) {
+        sessionStorage.setItem('user', JSON.stringify(data.user));
+      }
+      sessionStorage.setItem('userEmail', email);
+      sessionStorage.setItem('isLoggedIn', 'true');
+      successMsg.style.display = 'block';
+      successMsg.textContent = 'Login successful! Redirecting...';
+      setTimeout(() => {
+        window.location.href = 'main.html'; // Your dashboard page
+      }, 1000);
+    } else {
+      errorMsg.style.display = 'block';
+      errorMsg.textContent = data.message || 'Invalid email or password';
+    }
+  } catch (error) {
+    // Backend unreachable - use fallback dataset
+    const localMatch = doctorsDataset.find(d => d.email === email && d.password === password);
+    if (localMatch) {
+      sessionStorage.setItem('userEmail', email);
+      sessionStorage.setItem('user', JSON.stringify({ fullName: localMatch.fullName }));
+      sessionStorage.setItem('isLoggedIn', 'true');
+      successMsg.style.display = 'block';
+      successMsg.textContent = 'Login successful (local fallback)! Redirecting...';
+      setTimeout(() => {
+        window.location.href = 'main.html';
+      }, 1000);
+    } else {
+      errorMsg.style.display = 'block';
+      errorMsg.textContent = 'Unable to connect to server and invalid credentials.';
+    }
+  } finally {
+    loginBtn.innerHTML = 'Log In';
+    loginBtn.classList.remove('loading');
+  }
+});
+
+// Existing checkAuth function in your main.html remains unchanged (calls on page load).
+function checkAuth() {
+    const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+    if (isLoggedIn !== 'true') {
+        window.location.href = 'login.html';
+        return;
+    }
+    const user = sessionStorage.getItem('user');
+    const email = sessionStorage.getItem('userEmail');
+    let displayName = 'Doctor';
+    if (user) {
+        try {
+            const userData = JSON.parse(user);
+            displayName = userData.fullName || userData.name || email || 'Doctor';
+        } catch (e) {
+            displayName = email || 'Doctor';
+        }
+    } else if (email) {
+        displayName = email;
+    }
+    document.getElementById('docNameDisplay').textContent = displayName;
+    document.getElementById('welcome-doctor-name').textContent = `Welcome, ${displayName}`;
+}
+
+// Call checkAuth before anything else
+checkAuth();
 
 // AUTH CHECK - Redirect to login if not authenticated
 (function checkAuth() {
@@ -184,7 +289,8 @@ function updateMedicalRecordsUI() {
         recDiv.className = 'medical-record-card';
         recDiv.innerHTML = `<div><strong>${patient.name}</strong>, Age: ${patient.age}, Gender: ${patient.gender}, Phone: ${patient.phone}</div>
           <label>ECG Image:</label><br>
-          <input type="file" accept="image/*" class="ecg-upload" data-index="${idx}">
+         <input type="file" accept="image/png" class="ecg-upload" data-index="${idx}">
+
           <div class="ecg-btns">
             <button class="delete-ecg-btn" data-index="${idx}">Delete ECG</button>
             <button class="view-ecg-result-btn" data-index="${idx}">View Result</button>
@@ -246,6 +352,122 @@ window.onclick = e => {
     if (e.target === addModal) addModal.style.display = 'none';
     if (e.target === viewPatientModal) viewPatientModal.style.display = 'none';
 };
+medicalRecordsList.addEventListener('change', e => {
+    if (e.target.classList.contains('ecg-upload')) {
+        const file = e.target.files[0];
+        if (file && file.type !== 'image/png') {
+            alert('Only PNG files are allowed.');
+            e.target.value = ''; // Reset the file input
+            return;
+        }
+        // rest of your code to read the file
+    }
+});
+const doctorsDataset = [
+    { email: 'doctor1@example.com', password: 'pass123', fullName: 'Dr. John Doe' },
+    { email: 'doctor2@example.com', password: 'password', fullName: 'Dr. Jane Smith' }
+];
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    // Find matching doctor in dataset
+    const doctor = doctorsDataset.find(d => d.email === email && d.password === password);
+
+    if (doctor) {
+        // Set session storage
+        sessionStorage.setItem('isLoggedIn', 'true');
+        sessionStorage.setItem('userEmail', doctor.email);
+        sessionStorage.setItem('user', JSON.stringify(doctor));
+        // Redirect to dashboard
+        window.location.href = 'main.html';
+    } else {
+        // Show error message
+        document.getElementById('errorMsg').style.display = 'block';
+        document.getElementById('errorMsg').textContent = 'Invalid email or password';
+    }
+});
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  errorMsg.style.display = 'none';
+  successMsg.style.display = 'none';
+
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  if (!email || !password) {
+    showError('Please fill in all fields');
+    return;
+  }
+
+  loginBtn.innerHTML = '<span class="spinner"></span>Logging in...';
+  loginBtn.classList.add('loading');
+
+  // Hardcoded doctors dataset for local fallback validation
+  const doctorsDataset = [
+    { email: 'doctor1@example.com', password: 'pass123', fullName: 'Dr. Alice' },
+    { email: 'doctor2@example.com', password: 'password', fullName: 'Dr. Bob' }
+  ];
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      if (data.token) {
+        sessionStorage.setItem('authToken', data.token);
+      }
+      if (data.user) {
+        sessionStorage.setItem('user', JSON.stringify(data.user));
+      }
+      sessionStorage.setItem('userEmail', email);
+      sessionStorage.setItem('isLoggedIn', 'true');
+      showSuccess('Login successful! Redirecting...');
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 1000);
+    } else {
+      showError(data.message || 'Invalid email or password');
+    }
+  } catch (error) {
+    // Backend failed, use local fallback validation
+    const localMatch = doctorsDataset.find(d => d.email === email && d.password === password);
+    if (localMatch) {
+      sessionStorage.setItem('userEmail', email);
+      sessionStorage.setItem('user', JSON.stringify({ fullName: localMatch.fullName }));
+      sessionStorage.setItem('isLoggedIn', 'true');
+      showSuccess('Login successful (local fallback)! Redirecting...');
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 1000);
+    } else {
+      showError('Unable to connect to server and invalid credentials.');
+    }
+  } finally {
+    loginBtn.innerHTML = 'Log In';
+    loginBtn.classList.remove('loading');
+  }
+  function checkAuth() {
+    const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+    if (isLoggedIn !== 'true') {
+        window.location.href = 'login.html'; // Redirect to login if not logged in
+        return;
+    }
+    // rest of your code to display doctor name etc.
+}
+
+checkAuth(); // Call this as soon as your script runs
+
+});
+
 
 updatePatientListUI();
 updateMedicalRecordsUI();
